@@ -45,9 +45,29 @@ class GateSampleViewModel(application: Application) : AndroidViewModel(applicati
             } catch (t: Throwable) {
                 val errorText = buildString {
                     appendLine("❌ Error:")
-                    appendLine(t.message ?: "Unknown error")
-                    appendLine("\nStack trace:")
-                    appendLine(t.stackTraceToString().take(500))
+                    
+                    // Check if it's a GateApiException to show detailed error info
+                    if (t is com.gateai.sdk.network.GateApiException) {
+                        appendLine("\nHTTP Status: ${t.statusCode}")
+                        
+                        val errorBody = t.body
+                        if (errorBody != null && errorBody.isNotBlank()) {
+                            appendLine("\nServer Response:")
+                            appendLine(errorBody)
+                        }
+                        
+                        if (t.headers.isNotEmpty()) {
+                            appendLine("\nResponse Headers:")
+                            t.headers.forEach { (key, value) ->
+                                appendLine("  $key: $value")
+                            }
+                        }
+                    } else {
+                        appendLine(t.message ?: "Unknown error")
+                        appendLine("\nError Type: ${t::class.simpleName}")
+                        appendLine("\nStack trace (first 500 chars):")
+                        appendLine(t.stackTraceToString().take(500))
+                    }
                 }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
