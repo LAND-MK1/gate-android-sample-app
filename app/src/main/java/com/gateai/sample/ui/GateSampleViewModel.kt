@@ -22,18 +22,36 @@ class GateSampleViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, statusText = "Calling Gate/AI...")
             try {
-                val headers = gateAIClient.authorizationHeaders(
-                    path = "openai/models",
+                // Use performProxyRequest to test complete flow with DPoP nonce retry
+                val response = gateAIClient.performProxyRequest(
+                    path = "openai/v1/models",
                     method = com.gateai.sdk.core.HttpMethod.GET
                 )
+                
+                val responseBody = response.body
+                val statusText = buildString {
+                    appendLine("✅ Success!")
+                    appendLine("Status: ${response.status}")
+                    if (responseBody != null) {
+                        appendLine("\nResponse preview:")
+                        appendLine(responseBody.take(200) + "...")
+                    }
+                }
+                
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    statusText = "Success! Headers: ${headers.keys}"
+                    statusText = statusText
                 )
             } catch (t: Throwable) {
+                val errorText = buildString {
+                    appendLine("❌ Error:")
+                    appendLine(t.message ?: "Unknown error")
+                    appendLine("\nStack trace:")
+                    appendLine(t.stackTraceToString().take(500))
+                }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    statusText = "Error: ${t.message ?: "Unknown error"}"
+                    statusText = errorText
                 )
             }
         }
